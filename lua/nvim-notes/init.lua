@@ -3,8 +3,7 @@
 local M = {}
 
 function M.setup(opts)
-  require("nvim-notes.dashboard").setup(opts or {})
+	require("nvim-notes.dashboard").setup()
 end
 
 return M
-
