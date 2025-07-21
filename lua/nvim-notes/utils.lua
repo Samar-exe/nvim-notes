@@ -1,16 +1,16 @@
-local M = {}
+local utils = {}
 
-function M.center(str, width)
-	local padding = math.floor((width - #str) / 2)
-	if padding > 0 then
-		return string.rep(" ", padding) .. str
-	else
-		return str
+function utils.get_today_note()
+	local date = os.date("%Y-%m-%d")
+	local path = vim.fn.expand("~/notes/daily/" .. date .. ".txt")
+
+	if vim.fn.filereadable(path) == 0 then
+		vim.fn.mkdir(vim.fn.fnamemodify(path, ":h"), "p")
+		local header = "# " .. os.date("%A, %d %B %Y")
+		vim.fn.writefile({ header }, path)
 	end
+
+	return path
 end
 
-function M.hr(char, width)
-	return string.rep(char or "-", width or vim.o.columns)
-end
-
-return M
+return utils
