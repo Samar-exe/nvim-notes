@@ -16,7 +16,7 @@ function dashboard.setup()
 	}
 
 	function dashboard.open()
-		vim.cmd("enew")
+		vim.cmd("only")
 		local buf = vim.api.nvim_get_current_buf()
 
 		-- Buffer settings
@@ -30,6 +30,9 @@ function dashboard.setup()
 		vim.wo[0].signcolumn = "no"
 
 		-- Centered ASCII layout
+		--
+		vim.api.nvim_buf_add_highlight(buf, -1, "Title", 1, 0, -1) -- Logo line
+		vim.api.nvim_buf_add_highlight(buf, -1, "Identifier", 5, 0, -1) -- Header box line
 		local lines = {
 			"",
 			"   ░█▀▀░█▀▀░█▀█░▀█▀░█▀▀░█▀▀░█▀▀░█▄█",
@@ -50,7 +53,14 @@ function dashboard.setup()
 		table.insert(lines, "   Press corresponding key to open note | q to quit")
 		table.insert(lines, "")
 
-		vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+		local win_width = vim.api.nvim_win_get_width(0)
+		local centered_lines = {}
+		for _, line in ipairs(lines) do
+			local padding = math.floor((win_width - #line) / 2)
+			table.insert(centered_lines, string.rep(" ", padding > 0 and padding or 0) .. line)
+		end
+
+		vim.api.nvim_buf_set_lines(buf, 0, -1, false, centered_lines)
 		vim.bo[buf].modifiable = false
 
 		-- Keymaps
