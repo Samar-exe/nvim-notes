@@ -2,21 +2,21 @@ local dashboard = {}
 local utils = require("nvim-notes.utils")
 
 function dashboard.setup()
-	local entries = {
-		{
-			key = "t",
-			label = "📅 Today’s Note",
-			path = function()
-				return utils.get_today_note()
-			end,
-		},
-		{ key = "p", label = "🚀 Project Ideas", path = "~/notes/project_ideas.txt" },
-		{ key = "c", label = "🎓 Class Notes", path = "~/notes/class_notes.txt" },
-		{ key = "v", label = "📼 Video Notes", path = "~/notes/video_notes.txt" },
-		{ key = "s", label = "✍️ Scratchpad", path = "~/notes/scratchpad.txt" },
-	}
-
 	function dashboard.open()
+		local entries = {
+			{
+				key = "t",
+				label = "📅 Today’s Note",
+				path = function()
+					return utils.get_today_note()
+				end,
+			},
+			{ key = "p", label = "🚀 Project Ideas", path = "~/notes/project_ideas.txt" },
+			{ key = "c", label = "🎓 Class Notes", path = "~/notes/class_notes.txt" },
+			{ key = "v", label = "📼 Video Notes", path = "~/notes/video_notes.txt" },
+			{ key = "s", label = "✍️ Scratchpad", path = "~/notes/scratchpad.txt" },
+		}
+
 		vim.cmd("only")
 		local buf = vim.api.nvim_get_current_buf()
 
@@ -30,10 +30,10 @@ function dashboard.setup()
 		vim.wo[0].cursorline = false
 		vim.wo[0].signcolumn = "no"
 
-		-- Centered ASCII layout
-		--
-		vim.api.nvim_buf_add_highlight(buf, -1, "Title", 1, 0, -1) -- Logo line
-		vim.api.nvim_buf_add_highlight(buf, -1, "Identifier", 5, 0, -1) -- Header box line
+		-- ASCII layout
+		vim.api.nvim_buf_add_highlight(buf, -1, "Title", 1, 0, -1)
+		vim.api.nvim_buf_add_highlight(buf, -1, "Identifier", 5, 0, -1)
+
 		local lines = {
 			"",
 			"   ░█▀▀░█▀▀░█▀█░▀█▀░█▀▀░█▀▀░█▀▀░█▄█",
@@ -75,4 +75,5 @@ function dashboard.setup()
 		vim.keymap.set("n", "q", "<cmd>bd!<CR>", { buffer = buf })
 	end
 end
+
 return dashboard
