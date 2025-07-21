@@ -1,4 +1,5 @@
 local dashboard = {}
+local utils = require("nvim-notes-dashboard.utils")
 
 function dashboard.setup()
 	local entries = {
