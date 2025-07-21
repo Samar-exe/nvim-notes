@@ -11,35 +11,44 @@ local entries = {
 }
 
 function dashboard.open()
-  local buf = vim.api.nvim_create_buf(false, true)
+  vim.cmd("enew")
+  local buf = vim.api.nvim_get_current_buf()
+
+  -- Buffer settings
+  vim.bo[buf].buftype = "nofile"
+  vim.bo[buf].bufhidden = "wipe"
+  vim.bo[buf].swapfile = false
+  vim.bo[buf].modifiable = true
+  vim.wo[0].number = false
+  vim.wo[0].relativenumber = false
+  vim.wo[0].cursorline = false
+  vim.wo[0].signcolumn = "no"
+
+  -- Centered ASCII layout
   local lines = {
-    "┌─────────────────────────────────────────────┐",
-    "│             🧠 Notes Dashboard              │",
-    "└─────────────────────────────────────────────┘",
-    ""
+    "",
+    "   ░█▀▀░█▀▀░█▀█░▀█▀░█▀▀░█▀▀░█▀▀░█▄█",
+    "   ░▀▀█░█░░░█░█░░█░░█▀▀░▀▀█░█▀▀░█░█",
+    "   ░▀▀▀░▀▀▀░▀▀▀░░▀░░▀▀▀░▀▀▀░▀▀▀░▀░▀",
+    "",
+    "  ┌──────────────────────────────────────────┐",
+    "  │             🧠 Notes Dashboard           │",
+    "  └──────────────────────────────────────────┘",
+    "",
   }
 
   for _, entry in ipairs(entries) do
-    table.insert(lines, string.format(" [%s]  %s", entry.key, entry.label))
+    table.insert(lines, string.format("   [%s]  %s", entry.key, entry.label))
   end
 
   table.insert(lines, "")
-  table.insert(lines, " Shortcut Keys: t / p / c / v / s")
+  table.insert(lines, "   Press corresponding key to open note | q to quit")
+  table.insert(lines, "")
 
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-  vim.api.nvim_buf_set_option(buf, 'modifiable', false)
+  vim.bo[buf].modifiable = false
 
-  local win = vim.api.nvim_open_win(buf, true, {
-    relative = "editor",
-    width = 50,
-    height = #lines,
-    row = math.floor((vim.o.lines - #lines) / 2),
-    col = math.floor((vim.o.columns - 50) / 2),
-    style = "minimal",
-    border = "rounded"
-  })
-
-  -- keybindings for each note
+  -- Keymaps
   for _, entry in ipairs(entries) do
     vim.keymap.set("n", entry.key, function()
       local file = type(entry.path) == "function" and entry.path() or entry.path
@@ -47,9 +56,8 @@ function dashboard.open()
     end, { buffer = buf, nowait = true })
   end
 
-  -- Escape to quit dashboard
   vim.keymap.set("n", "q", "<cmd>bd!<CR>", { buffer = buf })
 end
 
-return dashboard
+ret
 
