@@ -31,9 +31,6 @@ function dashboard.setup()
 		vim.wo[0].signcolumn = "no"
 
 		-- ASCII layout
-		vim.api.nvim_buf_add_highlight(buf, -1, "Title", 1, 0, -1)
-		vim.api.nvim_buf_add_highlight(buf, -1, "Identifier", 5, 0, -1)
-
 		local lines = {
 			"",
 			"   ░█▀▀░█▀▀░█▀█░▀█▀░█▀▀░█▀▀░█▀▀░█▄█",
