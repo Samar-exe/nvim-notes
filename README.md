@@ -18,7 +18,7 @@ A flexible, interactive note-taking plugin for Neovim that adapts to any organiz
 
 ```lua
 {
-  "your-username/notes.nvim", -- Replace with actual repo
+  "samar-exe/notes.nvim", -- Replace with actual repo
   config = function()
     require("notes").setup()
   end,
@@ -29,7 +29,7 @@ A flexible, interactive note-taking plugin for Neovim that adapts to any organiz
 
 ```lua
 use {
-  "your-username/notes.nvim", -- Replace with actual repo
+  "samar-exe/notes.nvim", -- Replace with actual repo
   config = function()
     require("notes").setup()
   end
