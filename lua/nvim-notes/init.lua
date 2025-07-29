@@ -56,32 +56,56 @@ local config = {
 			"- [ ] ",
 			"",
 		},
+		dsa = {
+			"# {title}",
+			"**Created:** {datetime}",
+			"**Source:** ",
+			"**Pattern:** #",
+			"",
+			"## Problem Description",
+			"",
+			"## Approach",
+			"",
+			"## Code",
+			"```java",
+			"// Your solution",
+			"```",
+			"",
+			"## Time & Space Complexity",
+			"**Time:** O() | **Space:** O()",
+			"",
+			"## Related Problems",
+			"- ",
+			"",
+		},
+		atomic = {
+			"# {title}",
+			"",
+			"**Core Idea:** ",
+			"",
+			"## Key Points",
+			"- ",
+			"",
+			"## Example",
+			"```java",
+			"// Code example",
+			"```",
+			"",
+			"## Related Concepts",
+			"- [[]]",
+			"",
+		},
 	},
 
 	-- Directory structure - easily customizable
 	directories = {
-		-- Can be flat, nested, or any structure you want
-		-- Examples of different systems:
-
-		-- Flat structure
-		-- directories = {}
-
-		-- Simple categories
-		-- directories = {"work", "personal", "learning"}
-
-		-- PARA method
-		-- directories = {"01-projects", "02-areas", "03-resources", "04-archive"}
-
-		-- By type
-		-- directories = {"daily", "projects", "meetings", "reference"}
-
-		-- Current default: flexible structure
 		"inbox",
+		"fleeting",
+		"log",
 		"projects",
 		"areas",
-		"reference",
+		"resources",
 		"archive",
-		"daily",
 	},
 }
 
@@ -102,22 +126,24 @@ local function get_template_content(template_name, replacements)
 end
 
 local function ensure_directory(dir)
-	if vim.fn.isdirectory(dir) == 0 then
-		vim.fn.mkdir(dir, "p")
+	-- Handle both absolute paths and relative to notes_dir
+	local full_path = dir:match("^/") and dir or config.notes_dir .. dir
+	if vim.fn.isdirectory(full_path) == 0 then
+		vim.fn.mkdir(full_path, "p") -- "p" flag creates parent directories
 	end
 end
 
-local function get_all_directories()
-	local notes_dir = config.notes_dir
-	local dirs = { "." } -- Root notes directory
+-- Recursive directory discovery
+local function get_all_directories_recursive(base_dir, prefix)
+	base_dir = base_dir or config.notes_dir
+	prefix = prefix or ""
+	local dirs = {}
 
-	-- Add configured directories
-	for _, dir in ipairs(config.directories) do
-		table.insert(dirs, dir)
+	if vim.fn.isdirectory(base_dir) == 0 then
+		return dirs
 	end
 
-	-- Scan for additional directories
-	local handle = vim.loop.fs_scandir(notes_dir)
+	local handle = vim.loop.fs_scandir(base_dir)
 	if handle then
 		while true do
 			local name, type = vim.loop.fs_scandir_next(handle)
@@ -125,17 +151,55 @@ local function get_all_directories()
 				break
 			end
 
-			if type == "directory" and not vim.tbl_contains(dirs, name) then
-				table.insert(dirs, name)
+			if type == "directory" and not name:match("^%.") then -- Skip hidden directories
+				local full_name = prefix == "" and name or prefix .. "/" .. name
+				table.insert(dirs, full_name)
+
+				-- Recursively get subdirectories
+				local subdirs = get_all_directories_recursive(base_dir .. name .. "/", full_name)
+				for _, subdir in ipairs(subdirs) do
+					table.insert(dirs, subdir)
+				end
 			end
 		end
 	end
 
-	table.sort(dirs)
 	return dirs
 end
 
-local function get_note_files(directory)
+local function get_all_directories()
+	local dirs = { "." } -- Root notes directory
+
+	-- Add configured directories (these might not exist yet)
+	for _, dir in ipairs(config.directories) do
+		if not vim.tbl_contains(dirs, dir) then
+			table.insert(dirs, dir)
+		end
+	end
+
+	-- Add all existing nested directories
+	local existing_dirs = get_all_directories_recursive()
+	for _, dir in ipairs(existing_dirs) do
+		if not vim.tbl_contains(dirs, dir) then
+			table.insert(dirs, dir)
+		end
+	end
+
+	table.sort(dirs, function(a, b)
+		if a == "." then
+			return true
+		elseif b == "." then
+			return false
+		else
+			return a < b
+		end
+	end)
+
+	return dirs
+end
+
+-- Recursive file discovery
+local function get_note_files_recursive(directory)
 	local search_dir = directory == "." and config.notes_dir or config.notes_dir .. directory .. "/"
 	local files = {}
 
@@ -156,33 +220,40 @@ local function get_note_files(directory)
 					name = name,
 					path = directory == "." and name or directory .. "/" .. name,
 					full_path = search_dir .. name,
+					directory = directory,
 				})
+			elseif type == "directory" and not name:match("^%.") then
+				-- Recursively scan subdirectories
+				local subdir = directory == "." and name or directory .. "/" .. name
+				local subfiles = get_note_files_recursive(subdir)
+				for _, file in ipairs(subfiles) do
+					table.insert(files, file)
+				end
 			end
 		end
 	end
 
 	table.sort(files, function(a, b)
+		-- Sort by directory first, then by name
+		if a.directory ~= b.directory then
+			return a.directory < b.directory
+		end
 		return a.name < b.name
 	end)
+
 	return files
 end
 
-local function get_all_notes()
-	local all_notes = {}
-	local dirs = get_all_directories()
-
-	for _, dir in ipairs(dirs) do
-		local files = get_note_files(dir)
-		for _, file in ipairs(files) do
-			file.directory = dir
-			table.insert(all_notes, file)
-		end
-	end
-
-	return all_notes
+local function get_note_files(directory)
+	-- For backward compatibility, but now supports nested structure
+	return get_note_files_recursive(directory)
 end
 
--- Interactive directory selection
+local function get_all_notes()
+	return get_note_files_recursive(".")
+end
+
+-- Enhanced directory selection with visual nesting
 local function select_directory(callback, prompt)
 	prompt = prompt or "Select directory:"
 	local dirs = get_all_directories()
@@ -198,7 +269,11 @@ local function select_directory(callback, prompt)
 			elseif item == "📁 Create new directory..." then
 				return item
 			else
-				return "📁 " .. item
+				-- Show nested structure visually with indentation
+				local depth = select(2, item:gsub("/", "/"))
+				local indent = string.rep("  ", depth)
+				local name = item:match("([^/]+)$") or item
+				return indent .. "📁 " .. name
 			end
 		end,
 	}, function(choice)
@@ -207,12 +282,14 @@ local function select_directory(callback, prompt)
 		end
 
 		if choice == "📁 Create new directory..." then
-			vim.ui.input({ prompt = "New directory name: " }, function(new_dir)
+			vim.ui.input({
+				prompt = "Directory path (e.g., areas/programming/dsa): ",
+			}, function(new_dir)
 				if new_dir and new_dir ~= "" then
 					-- Clean the directory name
 					new_dir = new_dir:gsub("[^%w%-_/]", ""):gsub("^/+", ""):gsub("/+$", "")
 					if new_dir ~= "" then
-						ensure_directory(config.notes_dir .. new_dir)
+						ensure_directory(new_dir)
 						callback(new_dir)
 					end
 				end
@@ -301,14 +378,15 @@ function M.new_note(name, directory, template)
 	local content = get_template_content(template, replacements)
 
 	-- Create and open file
-	vim.cmd("edit " .. filepath)
+	vim.cmd("edit " .. vim.fn.fnameescape(filepath))
 	vim.api.nvim_buf_set_lines(0, 0, -1, false, content)
 	vim.cmd("write")
 
 	-- Position cursor at the end
 	vim.api.nvim_win_set_cursor(0, { #content, 0 })
 
-	print("Created note: " .. (directory == "." and "" or directory .. "/") .. name)
+	local display_path = directory == "." and name or directory .. "/" .. name
+	print("Created note: " .. display_path)
 end
 
 function M.open_note()
@@ -327,7 +405,7 @@ function M.open_note()
 		end,
 	}, function(choice)
 		if choice then
-			vim.cmd("edit " .. choice.full_path)
+			vim.cmd("edit " .. vim.fn.fnameescape(choice.full_path))
 		end
 	end)
 end
@@ -341,14 +419,41 @@ function M.browse_directory()
 			return
 		end
 
-		vim.ui.select(files, {
-			prompt = "Notes in " .. selected_dir .. ":",
+		-- Filter files to only show those directly in the selected directory or its immediate subdirectories
+		local filtered_files = {}
+		for _, file in ipairs(files) do
+			-- Show files that are in the exact directory or one level deeper
+			local relative_path = file.path
+			if selected_dir ~= "." then
+				relative_path = relative_path:gsub("^" .. vim.pesc(selected_dir) .. "/", "")
+			end
+
+			-- Count directory separators - 0 means direct file, 1 means one level deep
+			local depth = select(2, relative_path:gsub("/", "/"))
+			if depth <= 1 then
+				table.insert(filtered_files, file)
+			end
+		end
+
+		vim.ui.select(filtered_files, {
+			prompt = "Notes in " .. (selected_dir == "." and "root" or selected_dir) .. ":",
 			format_item = function(item)
-				return "📝 " .. item.name:gsub("%.md$", "")
+				local relative_path = item.path
+				if selected_dir ~= "." then
+					relative_path = relative_path:gsub("^" .. vim.pesc(selected_dir) .. "/", "")
+				end
+
+				-- Show subdirectory if file is in one
+				local subdir = relative_path:match("^([^/]+)/")
+				if subdir then
+					return "📁 " .. subdir .. " → 📝 " .. item.name:gsub("%.md$", "")
+				else
+					return "📝 " .. item.name:gsub("%.md$", "")
+				end
 			end,
 		}, function(choice)
 			if choice then
-				vim.cmd("edit " .. choice.full_path)
+				vim.cmd("edit " .. vim.fn.fnameescape(choice.full_path))
 			end
 		end)
 	end, "Browse which directory?")
@@ -418,7 +523,7 @@ function M.add_todo()
 	end)
 end
 
--- Search function (enhanced)
+-- Enhanced search function with better path handling
 function M.search_notes(query)
 	if not query or query == "" then
 		vim.ui.input({ prompt = "Search in notes: " }, function(input_query)
@@ -431,9 +536,12 @@ function M.search_notes(query)
 
 	local search_cmd
 	if vim.fn.executable("rg") == 1 then
-		search_cmd = "rg --type md --line-number --no-heading --color=never '" .. query .. "' " .. config.notes_dir
+		search_cmd = "rg --type md --line-number --no-heading --color=never '"
+			.. query
+			.. "' "
+			.. vim.fn.shellescape(config.notes_dir)
 	else
-		search_cmd = "grep -rn --include='*.md' '" .. query .. "' " .. config.notes_dir
+		search_cmd = "grep -rn --include='*.md' '" .. query .. "' " .. vim.fn.shellescape(config.notes_dir)
 	end
 
 	local results = vim.fn.systemlist(search_cmd)
@@ -465,8 +573,8 @@ function M.daily_note()
 	local date = os.date(config.date_format)
 	local filename = "daily-" .. date .. config.default_extension
 
-	-- Check if daily directory exists, if not ask where to put it
-	local daily_dir = config.notes_dir .. "daily/"
+	-- Check if log directory exists, if not ask where to put it
+	local daily_dir = config.notes_dir .. "log/"
 	if vim.fn.isdirectory(daily_dir) == 0 then
 		select_directory(function(selected_dir)
 			local target_dir = selected_dir == "." and config.notes_dir or config.notes_dir .. selected_dir .. "/"
@@ -488,11 +596,11 @@ function M.create_daily_note(filepath, date)
 
 		local content = get_template_content("daily", replacements)
 
-		vim.cmd("edit " .. filepath)
+		vim.cmd("edit " .. vim.fn.fnameescape(filepath))
 		vim.api.nvim_buf_set_lines(0, 0, -1, false, content)
 		vim.cmd("write")
 	else
-		vim.cmd("edit " .. filepath)
+		vim.cmd("edit " .. vim.fn.fnameescape(filepath))
 	end
 end
 
@@ -520,7 +628,7 @@ function M.quick_note()
 				"",
 			}
 
-			vim.cmd("edit " .. filepath)
+			vim.cmd("edit " .. vim.fn.fnameescape(filepath))
 			vim.api.nvim_buf_set_lines(0, 0, -1, false, content)
 			vim.cmd("write")
 			print("Quick note saved: " .. filename)
@@ -538,7 +646,7 @@ function M.setup(opts)
 
 	-- Create configured directories
 	for _, dir in ipairs(config.directories) do
-		ensure_directory(config.notes_dir .. dir)
+		ensure_directory(dir)
 	end
 
 	-- Commands
@@ -577,7 +685,7 @@ function M.switch_system(system_name)
 			directories = {},
 		},
 		para = {
-			directories = { "01-projects", "02-areas", "03-resources", "04-archive" },
+			directories = { "projects", "areas", "resources", "archive" },
 		},
 		simple = {
 			directories = { "work", "personal", "learning", "archive" },
@@ -588,6 +696,9 @@ function M.switch_system(system_name)
 		zettelkasten = {
 			directories = { "permanent", "literature", "fleeting", "projects" },
 		},
+		learning = {
+			directories = { "inbox", "fleeting", "log", "areas", "resources", "archive" },
+		},
 	}
 
 	if systems[system_name] then
@@ -595,7 +706,7 @@ function M.switch_system(system_name)
 
 		-- Create new directories
 		for _, dir in ipairs(config.directories) do
-			ensure_directory(config.notes_dir .. dir)
+			ensure_directory(dir)
 		end
 
 		print("Switched to " .. system_name .. " organizational system")
