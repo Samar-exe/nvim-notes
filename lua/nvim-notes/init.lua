@@ -317,53 +317,6 @@ local function select_template(callback)
 end
 
 -- Main functions
---
-function M.goto_linked_note()
-	local cursor = vim.api.nvim_win_get_cursor(0)
-	local line = vim.api.nvim_get_current_line()
-
-	-- Grab text up to cursor to match a [[link]]
-	local before_cursor = line:sub(1, cursor[2] + 1)
-	local link = before_cursor:match("%[%[([^%]]+)%]%]")
-
-	if not link then
-		print("No [[link]] found on this line")
-		return
-	end
-
-	local filename = link .. config.default_extension
-	local matches = {}
-
-	-- Search for file with that exact name
-	for _, note in ipairs(get_all_notes()) do
-		if note.name == filename then
-			table.insert(matches, note)
-		end
-	end
-
-	if #matches == 1 then
-		vim.cmd("edit " .. vim.fn.fnameescape(matches[1].full_path))
-	elseif #matches > 1 then
-		vim.ui.select(matches, {
-			prompt = "Multiple matches found:",
-			format_item = function(item)
-				return item.path
-			end,
-		}, function(choice)
-			if choice then
-				vim.cmd("edit " .. vim.fn.fnameescape(choice.full_path))
-			end
-		end)
-	else
-		-- Not found? Ask to create the note
-		vim.ui.input({ prompt = "Note not found. Create it? (Y/n): ", default = "Y" }, function(ans)
-			if ans and ans:lower() == "y" then
-				M.new_note(link)
-			end
-		end)
-	end
-end
-
 function M.new_note(name, directory, template)
 	-- Interactive workflow if parameters not provided
 	if not directory then
@@ -721,7 +674,6 @@ function M.setup(opts)
 			local opts = { buffer = true, silent = true }
 			vim.keymap.set("n", "<leader>tt", M.toggle_todo, opts)
 			vim.keymap.set("n", "<leader>ta", M.add_todo, opts)
-			vim.keymap.set("n", "<leader>zn", M.goto_linked_note, opts)
 		end,
 	})
 end
