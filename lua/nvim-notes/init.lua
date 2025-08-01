@@ -604,9 +604,16 @@ end
 
 -- Quick note (inbox-style)
 function M.quick_note()
-	local timestamp = os.date("%H%M%S")
-	local filename = "quick-" .. os.date(config.date_format) .. "-" .. timestamp .. config.default_extension
+	local name
+	vim.ui.input({ prompt = "Note name: " }, function(input_name)
+		if input_name and input_name ~= "" then
+			name = input_name
+		else
+			print("Note creation cancelled")
+		end
+	end)
 
+	local filename = os.date(config.date_format) .. "-" .. name .. "-" .. config.default_extension
 	-- Always goes to inbox or root
 	local inbox_dir = config.notes_dir .. "inbox/"
 	if vim.fn.isdirectory(inbox_dir) == 0 then
@@ -615,10 +622,11 @@ function M.quick_note()
 
 	local filepath = inbox_dir .. filename
 
+	local title = name:gsub("%$", "")
 	vim.ui.input({ prompt = "Quick note: " }, function(note_content)
 		if note_content and note_content ~= "" then
 			local content = {
-				"# Quick Note",
+				"# " .. title,
 				"",
 				"Created: " .. os.date(config.datetime_format),
 				"",
