@@ -623,23 +623,20 @@ function M.quick_note()
 	local filepath = inbox_dir .. filename
 
 	local title = name:gsub("%$", "")
-	vim.ui.input({ prompt = "Quick note: " }, function(note_content)
-		if note_content and note_content ~= "" then
-			local content = {
-				"# " .. title,
-				"",
-				"Created: " .. os.date(config.datetime_format),
-				"",
-				note_content,
-				"",
-			}
+	local create = function()
+		local content = {
+			"# " .. title,
+			"",
+			"Created: " .. os.date(config.datetime_format),
+			"",
+		}
 
-			vim.cmd("edit " .. vim.fn.fnameescape(filepath))
-			vim.api.nvim_buf_set_lines(0, 0, -1, false, content)
-			vim.cmd("write")
-			print("Quick note saved: " .. filename)
-		end
-	end)
+		vim.cmd("edit " .. vim.fn.fnameescape(filepath))
+		vim.api.nvim_buf_set_lines(0, 0, -1, false, content)
+		vim.cmd("write")
+		print("Quick note saved: " .. filename)
+	end
+	create()
 end
 
 -- Configuration and setup
