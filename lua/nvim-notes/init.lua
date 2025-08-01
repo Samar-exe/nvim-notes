@@ -610,6 +610,7 @@ function M.quick_note()
 			name = input_name
 		else
 			print("Quick note not created")
+			return
 		end
 	end)
 
