@@ -604,7 +604,7 @@ end
 
 -- Quick note (inbox-style)
 function M.quick_note()
-	local name
+	local name = "quick"
 	vim.ui.input({ prompt = "Quick note: " }, function(input_name)
 		if input_name and input_name ~= "" then
 			name = input_name
