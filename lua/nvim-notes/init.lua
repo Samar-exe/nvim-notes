@@ -604,7 +604,7 @@ end
 
 -- Quick note (inbox-style)
 function M.quick_note()
-	local name = "quick"
+	local name
 	vim.ui.input({ prompt = "Quick note: " }, function(input_name)
 		if input_name and input_name ~= "" then
 			name = input_name
@@ -613,7 +613,9 @@ function M.quick_note()
 			return
 		end
 	end)
-
+	if name == nil then
+		return
+	end
 	local filename = os.date(config.date_format) .. "-" .. name .. "-" .. config.default_extension
 	-- Always goes to inbox or root
 	local inbox_dir = config.notes_dir .. "inbox/"
