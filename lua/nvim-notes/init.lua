@@ -605,11 +605,11 @@ end
 -- Quick note (inbox-style)
 function M.quick_note()
 	local name
-	vim.ui.input({ prompt = "Note name: " }, function(input_name)
+	vim.ui.input({ prompt = "Quick note: " }, function(input_name)
 		if input_name and input_name ~= "" then
 			name = input_name
 		else
-			print("Note creation cancelled")
+			print("Quick note not created")
 		end
 	end)
 
