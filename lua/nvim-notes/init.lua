@@ -22,10 +22,8 @@ local config = {
 			"",
 			"## Focus",
 			"",
-			"## Notes",
-			"",
-			"## Todo",
-			"- [ ] ",
+
+			"## Logs",
 			"",
 		},
 		project = {
